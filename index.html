@@ -1,0 +1,163 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panther AI - Image Generation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-primary': '#1e1b4b',
+              'brand-secondary': '#312e81',
+              'brand-accent': '#6366f1',
+              'brand-light': '#e0e7ff',
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-in-out',
+              'slide-up': 'slideUp 0.5s ease-in-out',
+              'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: 0 },
+                '100%': { opacity: 1 },
+              },
+              slideUp: {
+                '0%': { transform: 'translateY(20px)', opacity: 0 },
+                '100%': { transform: 'translateY(0)', opacity: 1 },
+              },
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        .hidden { display: none; }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.1"
+      }
+    }
+    </script>
+</head>
+  <body class="bg-brand-primary text-brand-light">
+    
+    <div class="min-h-screen bg-gradient-to-br from-brand-primary via-slate-900 to-black font-sans">
+      <header class="p-4 border-b border-brand-secondary/30">
+        <div class="container mx-auto flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 text-brand-accent">
+              <path d="M15.5 6.5C14.2 6.5 13.5 8 13.5 8s.7-1.5-1.5-1.5S10 8 10 8s-.7-1.5-1.5-1.5S6 8 6 8s-.7-1.5-1.5-1.5"></path>
+              <path d="M6.5 12.5c0-1.5 1-2 1-2"></path>
+              <path d="M16.5 12.5c0-1.5-1-2-1-2"></path>
+              <path d="M2.5 12.8c0 3.5 2 6.5 5.5 7.5"></path>
+              <path d="M21.5 12.8c0 3.5-2 6.5-5.5 7.5"></path>
+              <path d="M12 17.5c-2.5 0-4.5-2-4.5-4.5 0-2.5 1-4.5 4.5-4.5s4.5 2 4.5 4.5c0 2.5-2 4.5-4.5 4.5Z"></path>
+              <path d="M9 13.25c0 .69.56 1.25 1.25 1.25h3.5c.69 0 1.25-.56 1.25-1.25V13c0-.69-.56-1.25-1.25-1.25h-3.5C9.56 11.75 9 12.31 9 13Z"></path>
+          </svg>
+          <h1 class="ml-3 text-3xl font-bold tracking-tighter text-white">
+            Panther <span class="text-brand-accent">AI</span>
+          </h1>
+        </div>
+      </header>
+      <main class="container mx-auto px-4 py-8">
+        <div class="bg-slate-900/50 backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 animate-slide-up">
+          <div class="flex justify-center mb-8 border-b border-brand-secondary pb-4">
+            <div class="bg-brand-secondary p-1 rounded-full flex space-x-1">
+              <button id="mode-single-btn" class="px-4 py-2 text-sm md:text-base font-semibold rounded-full transition-all duration-300 bg-brand-accent text-white shadow-lg">
+                Single Image
+              </button>
+              <button id="mode-bulk-btn" class="px-4 py-2 text-sm md:text-base font-semibold rounded-full transition-all duration-300 text-indigo-200 hover:bg-brand-accent/50">
+                Bulk Images
+              </button>
+            </div>
+          </div>
+
+          <!-- Single Image Generator -->
+          <div id="single-generator-container" class="space-y-6 animate-fade-in">
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label for="prompt" class="block text-sm font-medium text-indigo-200 mb-2">Prompt</label>
+                    <textarea id="prompt" rows="3" placeholder="e.g., A majestic panther with glowing purple eyes in a dark forest" class="w-full bg-brand-secondary/50 border border-brand-secondary rounded-lg p-3 text-white focus:ring-2 focus:ring-brand-accent focus:border-brand-accent transition-all duration-300"></textarea>
+                </div>
+                <div>
+                    <label for="style" class="block text-sm font-medium text-indigo-200 mb-2">Style</label>
+                    <select id="style" class="w-full bg-brand-secondary/50 border border-brand-secondary rounded-lg p-3 text-white focus:ring-2 focus:ring-brand-accent focus:border-brand-accent transition-all duration-300"></select>
+                </div>
+                <div>
+                    <label for="aspectRatio" class="block text-sm font-medium text-indigo-200 mb-2">Aspect Ratio</label>
+                    <select id="aspectRatio" class="w-full bg-brand-secondary/50 border border-brand-secondary rounded-lg p-3 text-white focus:ring-2 focus:ring-brand-accent focus:border-brand-accent transition-all duration-300"></select>
+                </div>
+            </div>
+            <div>
+                <label for="variations" class="block text-sm font-medium text-indigo-200 mb-2">Variations: <span id="variations-value">1</span></label>
+                <input id="variations" type="range" min="1" max="4" value="1" class="w-full h-2 bg-brand-secondary rounded-lg appearance-none cursor-pointer accent-brand-accent">
+            </div>
+            <div id="single-error-container" class="hidden bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg items-center"></div>
+            <div class="text-center">
+                <button id="generate-single-btn" class="w-full md:w-auto bg-brand-accent hover:bg-indigo-500 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white font-bold py-3 px-12 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center mx-auto">
+                    Generate 1 Image
+                </button>
+            </div>
+          </div>
+
+          <!-- Bulk Image Generator -->
+          <div id="bulk-generator-container" class="space-y-6 animate-fade-in hidden">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-3">
+                    <label for="prompts-bulk" class="block text-sm font-medium text-indigo-200 mb-2">Prompts (one per line)</label>
+                    <textarea id="prompts-bulk" rows="6" placeholder="A cat wearing a wizard hat&#10;A dog surfing on a rainbow wave&#10;A robot drinking coffee in a cafe" class="w-full bg-brand-secondary/50 border border-brand-secondary rounded-lg p-3 text-white focus:ring-2 focus:ring-brand-accent focus:border-brand-accent transition-all duration-300"></textarea>
+                </div>
+                 <div>
+                    <label for="style-bulk" class="block text-sm font-medium text-indigo-200 mb-2">Style</label>
+                    <select id="style-bulk" class="w-full bg-brand-secondary/50 border border-brand-secondary rounded-lg p-3 text-white focus:ring-2 focus:ring-brand-accent focus:border-brand-accent transition-all duration-300"></select>
+                </div>
+                <div>
+                    <label for="aspectRatio-bulk" class="block text-sm font-medium text-indigo-200 mb-2">Aspect Ratio</label>
+                    <select id="aspectRatio-bulk" class="w-full bg-brand-secondary/50 border border-brand-secondary rounded-lg p-3 text-white focus:ring-2 focus:ring-brand-accent focus:border-brand-accent transition-all duration-300"></select>
+                </div>
+                <div>
+                    <label for="concurrency" class="block text-sm font-medium text-indigo-200 mb-2">Concurrent: <span id="concurrency-value">2</span></label>
+                    <input id="concurrency" type="range" min="1" max="5" value="2" class="w-full h-2 bg-brand-secondary rounded-lg appearance-none cursor-pointer accent-brand-accent">
+                </div>
+              </div>
+              
+              <div id="progress-container" class="hidden">
+                  <div class="w-full bg-brand-secondary rounded-full h-4">
+                    <div id="progress-bar" class="bg-brand-accent h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                  </div>
+                  <p id="progress-text" class="text-center text-indigo-200 mt-2">Progress: 0 / 0</p>
+              </div>
+
+              <div id="bulk-error-container" class="hidden bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg items-center"></div>
+
+              <div class="flex flex-col md:flex-row justify-center items-center gap-4">
+                <button id="generate-bulk-btn" class="w-full md:w-auto bg-brand-accent hover:bg-indigo-500 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white font-bold py-3 px-12 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center">
+                    Generate 0 Images
+                </button>
+                <button id="download-zip-btn" class="hidden w-full md:w-auto bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-12 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg items-center justify-center">
+                    <!-- Zip Icon SVG -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line><line x1="10" y1="12" x2="10" y2="14"></line><line x1="12" y1="12" x2="12" y2="14"></line><line x1="14" y1="12" x2="14" y2="14"></line><line x1="10" y1="18" x2="14" y2="18"></line></svg>
+                    Download All (.zip)
+                </button>
+              </div>
+          </div>
+        </div>
+
+        <!-- Image Grid -->
+        <div id="gallery-container" class="mt-12">
+            <!-- This will be populated by JavaScript -->
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/index.js"></script>
+  </body>
+</html>
